@@ -13,8 +13,10 @@ pub struct JsonParser {
 }
 
 impl JsonParser {
-    pub fn new(field: String) -> Self {
-        Self { field }
+    pub fn new(field: &str) -> Self {
+        Self {
+            field: field.to_string(),
+        }
     }
 }
 

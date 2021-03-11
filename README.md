@@ -20,11 +20,14 @@ $ cat timestamps | dta minimum -d "%Y-%m-%dT%H:%M:%S"
 ```
 
 Features included:
-* Range[^1]
-* Split[^1]
-* Minimum[^1], Maximum
-* Count[^1]
-* Flatten[^2][^2]
+* Range*
+* Split*
+* Minimum, Maximum
+* Count
+* Flatten* **
+
+*WIP
+**Flatten a timestamp to a certain level, ie. 2021-01-01 12:01:02 to hour returns 12:01:02 
 
 ## Building
 
@@ -32,7 +35,3 @@ Features included:
 `dta` has several features when being used as a library including:
 * csv, a feature enabling the parsing of CSV data.
 * json, a feature enabling the parsing of JSON data.
-
-
-[^1]: WIP
-[^2]: Flatten a timestamp to a certain level, ie. 2021-01-01 12:01:02 to hour returns 12:01:02 

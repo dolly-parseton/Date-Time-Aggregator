@@ -14,8 +14,13 @@ use date_time_aggregator::input::stdin::StdinSource;
 
 // Imports
 use date_time_aggregator::{
-    aggregators::{maximum::MaximumAggregator, Aggregator},
+    aggregators::{
+        count::CountAggregator,
+        max_min::{MaximumAggregator, MinimumAggregator},
+        Aggregator,
+    },
     input::{simple::SimpleParser, Parser, Source},
+    Data,
 };
 use log::LevelFilter;
 use simplelog::*;
@@ -79,9 +84,11 @@ struct Opt {
 //     },
 // }
 
-#[derive(Debug, PartialEq, StructOpt)]
+#[derive(Debug, PartialEq, StructOpt, Clone)]
 enum Aggregators {
     Maximum,
+    Minimum,
+    Count,
 }
 
 fn main() {
@@ -99,8 +106,8 @@ fn main() {
     }
 
     // Match based on the command line options to decide what todo.
-    let mut source: Box<dyn Source> = match opt.glob {
-        Some(g) => match FileSource::new(&g, true) {
+    let source: Box<dyn Source> = match opt.glob {
+        Some(ref g) => match FileSource::new(&g, true) {
             Ok(s) => (Box::new(s) as Box<dyn Source>),
             Err(e) => {
                 error!("Error whilst creating source: {}", e.reason);
@@ -110,7 +117,7 @@ fn main() {
         None => (Box::new(StdinSource::default()) as Box<dyn Source>),
     };
 
-    let parser: Box<dyn Parser> = match (opt.csv, opt.json) {
+    let parser: Box<dyn Parser> = match (opt.csv.as_ref(), opt.json.as_ref()) {
         (Some(_c), Some(_j)) => {
             // Error
             error!(
@@ -119,26 +126,36 @@ fn main() {
             );
             std::process::exit(1);
         }
-        (Some(c), None) => (Box::new(CsvParser::new(c)) as Box<dyn Parser>),
+        (Some(c), None) => (Box::new(CsvParser::new(*c)) as Box<dyn Parser>),
         (None, Some(j)) => (Box::new(JsonParser::new(j)) as Box<dyn Parser>),
         (None, None) => (Box::new(SimpleParser::default()) as Box<dyn Parser>),
     };
 
-    // match i {
-    //     Inputs::JSON => (Box::new(JsonParser::new(field)) as Box<dyn Parser>),
-    //     Inputs::CSV => {
-    //         error!(
-    //             "Error whilst creating parser: {}",
-    //             "CSV Parser is not currently supported"
-    //         );
-    //         std::process::exit(1);
-    //     }
-    // }
-
-    let mut aggregator: Box<dyn Aggregator> = match opt.aggregator {
-        Aggregators::Maximum => (Box::new(MaximumAggregator::default()) as Box<dyn Aggregator>),
+    match opt.aggregator.clone() {
+        Aggregators::Maximum => {
+            let mut aggregator = MaximumAggregator::default();
+            run(source, parser, &mut aggregator, &opt);
+            let _ = aggregator.output();
+        }
+        Aggregators::Minimum => {
+            let mut aggregator = MinimumAggregator::default();
+            run(source, parser, &mut aggregator, &opt);
+            let _ = aggregator.output();
+        }
+        Aggregators::Count => {
+            let mut aggregator = CountAggregator::default();
+            run(source, parser, &mut aggregator, &opt);
+            let _ = aggregator.output();
+        }
     };
+}
 
+fn run<A: Aggregator>(
+    mut source: Box<dyn Source>,
+    parser: Box<dyn Parser>,
+    aggregator: &mut A,
+    opt: &Opt,
+) {
     while let Ok(r) = source.read_data() {
         if r.is_empty() {
             break;
@@ -152,5 +169,4 @@ fn main() {
             Err(e) => error!("Error occured in parsing: {:?}", e),
         }
     }
-    let _ = aggregator.output();
 }

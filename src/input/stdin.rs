@@ -18,7 +18,7 @@ impl Default for StdinSource {
 }
 
 impl Source for StdinSource {
-    fn read_data(&self) -> Result<Vec<u8>> {
+    fn read_data(&mut self) -> Result<Vec<u8>> {
         match self.stdin.lock().lines().next() {
             Some(Ok(input)) => {
                 debug!("Reading {} bytes from Stdin: \"{}\"", input.len(), input);

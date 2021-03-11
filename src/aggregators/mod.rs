@@ -13,7 +13,6 @@
 pub mod maximum;
 
 use crate::{Data, Result};
-use chrono::{DateTime, FixedOffset};
 
 pub trait Aggregator {
     // Update the state of the aggregation.

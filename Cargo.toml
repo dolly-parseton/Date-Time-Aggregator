@@ -11,10 +11,9 @@ path = "src/main.rs"
 required-features = ["bin-deps", "json-parser", "csv-parser", "file-input", "stdin-input"]
 
 [features]
-default = []
-
 bin-deps = ["structopt", "simplelog"]
 csv-parser = ["csv"]
+default = []
 file-input = ["glob"]
 json-parser = ["serde_json"]
 stdin-input = []

@@ -17,12 +17,11 @@ pub mod stdin;
 
 // Uses
 use crate::{Data, Result};
-use chrono::{DateTime, FixedOffset};
 
 /// Source Trait can be used to read in raw bytes, the struct the trait is implimented on holds the position.
 pub trait Source {
     /// Read an entry from source location
-    fn read_data(&self) -> Result<Vec<u8>>;
+    fn read_data(&mut self) -> Result<Vec<u8>>;
 }
 
 /// Parser Trait can be implimented to read in raw data from a [`Source`](crate::input::Source) using an option provided
@@ -31,7 +30,7 @@ pub trait Parser {
     fn parse_data(
         &self,
         raw: Vec<u8>,
-        _field: &str,
+        // field: Option<&String>,
         fmt: Option<&String>,
         tz: Option<&String>,
     ) -> Result<Data>;
@@ -43,7 +42,6 @@ pub mod simple {
         input::Parser,
         Data, Result,
     };
-    use chrono::{DateTime, FixedOffset};
 
     pub struct SimpleParser;
 
@@ -56,7 +54,7 @@ pub mod simple {
         fn parse_data(
             &self,
             raw: Vec<u8>,
-            _field: &str,
+            // _field: Option<&String>,
             fmt: Option<&String>,
             tz: Option<&String>,
         ) -> Result<Data> {

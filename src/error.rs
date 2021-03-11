@@ -32,6 +32,46 @@ impl From<serde_json::Error> for Error {
     }
 }
 
+#[cfg(feature = "csv-parser")]
+impl From<csv::Error> for Error {
+    fn from(err: csv::Error) -> Self {
+        Self {
+            reason: format!("{}", err),
+            kind: ErrorKind::Parser,
+        }
+    }
+}
+
+#[cfg(feature = "file-input")]
+impl From<glob::PatternError> for Error {
+    fn from(err: glob::PatternError) -> Self {
+        Self {
+            reason: format!("{}", err),
+            kind: ErrorKind::Parser,
+        }
+    }
+}
+
+#[cfg(feature = "file-input")]
+impl From<glob::GlobError> for Error {
+    fn from(err: glob::GlobError) -> Self {
+        Self {
+            reason: format!("{}", err),
+            kind: ErrorKind::Parser,
+        }
+    }
+}
+
+#[cfg(feature = "file-input")]
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Self {
+            reason: format!("{}", err),
+            kind: ErrorKind::Parser,
+        }
+    }
+}
+
 impl From<std::num::TryFromIntError> for Error {
     fn from(err: std::num::TryFromIntError) -> Self {
         Self {

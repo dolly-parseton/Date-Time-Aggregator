@@ -4,7 +4,6 @@ extern crate log;
 extern crate lazy_static;
 extern crate serde;
 #[cfg(feature = "json-parser")]
-#[macro_use]
 extern crate serde_json;
 pub mod aggregators;
 mod error;
@@ -63,9 +62,9 @@ impl Data {
 mod datetime_parsing {
     //
     lazy_static! {
-        static ref time_zone_regex_1: regex::Regex =
+        static ref TIME_ZONE_REGEX_1: regex::Regex =
             regex::Regex::new(r"(\+|\-)([0-1][0-9]):([0-9]{2})").unwrap();
-        static ref time_zone_regex_2: regex::Regex =
+        static ref TIME_ZONE_REGEX_2: regex::Regex =
             regex::Regex::new(r"(\+|\-)([0-1][0-9])([0-9]{2})").unwrap();
     }
     //
@@ -75,8 +74,8 @@ mod datetime_parsing {
     pub fn parse_fixed_offset(tz: Option<&String>) -> Result<FixedOffset> {
         if let Some(tz_str) = tz.as_ref() {
             match (
-                time_zone_regex_1.captures(tz_str),
-                time_zone_regex_2.captures(tz_str),
+                TIME_ZONE_REGEX_1.captures(tz_str),
+                TIME_ZONE_REGEX_2.captures(tz_str),
             ) {
                 (Some(captures), None) | (None, Some(captures)) => {
                     let is_east: Option<bool> = captures.get(1).map(|b| b.as_str() == "+");

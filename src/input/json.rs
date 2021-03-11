@@ -7,20 +7,22 @@ use crate::{
     input::Parser,
     Data, Result,
 };
-use chrono::{DateTime, FixedOffset};
 
-pub struct JsonParser;
+pub struct JsonParser {
+    field: String,
+}
 
-impl Default for JsonParser {
-    fn default() -> Self {
-        Self
+impl JsonParser {
+    pub fn new(field: String) -> Self {
+        Self { field }
     }
 }
+
 impl Parser for JsonParser {
     fn parse_data(
         &self,
         raw: Vec<u8>,
-        field: &str,
+        // field: Option<&String>,
         fmt: Option<&String>,
         tz: Option<&String>,
     ) -> Result<Data> {
@@ -40,7 +42,7 @@ impl Parser for JsonParser {
 
         match serde_json::from_str::<serde_json::Value>(data) {
             Ok(v) => {
-                if let Some(ts_value) = v.get(field) {
+                if let Some(ts_value) = v.get(&self.field) {
                     println!("{:?}", ts_value);
                     if let Some(ts_str) = ts_value.as_str() {
                         let data = Data::new(ts_str, fmt, tz, raw)?;
@@ -49,7 +51,7 @@ impl Parser for JsonParser {
                     }
                 }
                 let err = Error {
-                    reason: format!("Could no find a field named {}", field),
+                    reason: format!("Could no find a field named {}", self.field),
                     kind: ErrorKind::Parser,
                 };
                 error!("Error occured during parsing: {:?}", err);

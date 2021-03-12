@@ -11,6 +11,7 @@
 //! Note: Not selecting an aggregator when running the `dta` binary will pass the data along
 //!
 pub mod max_min;
+pub mod split;
 
 use crate::{Data, Result};
 

@@ -17,13 +17,14 @@ use date_time_aggregator::{
     aggregators::{
         count::CountAggregator,
         max_min::{MaximumAggregator, MinimumAggregator},
+        split::SplitAggregator,
         Aggregator,
     },
     input::{simple::SimpleParser, Parser, Source},
-    Data,
 };
 use log::LevelFilter;
 use simplelog::*;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -63,32 +64,30 @@ struct Opt {
     convert_timestamp: Option<String>,
 }
 
-// /// Function provides parsing functionality to read Input options from argument.
-// fn parse_input_format(s: &str) -> Result<Inputs, Box<dyn std::error::Error>> {
-//     match s.to_ascii_lowercase().as_ref() {
-//         "csv" => Ok(Inputs::CSV { level: 0 }),
-//         "json" => Ok(Inputs::JSON),
-//         _ => Err("Could not parse input-format string.".into()),
-//     }
-// }
-
-// #[derive(Debug, PartialEq, StructOpt)]
-// enum Inputs {
-//     CSV {
-//         #[structopt(short, long)]
-//         level: u8,
-//     },
-//     JSON {
-//         #[structopt(short, long)]
-//         field: String,
-//     },
-// }
-
 #[derive(Debug, PartialEq, StructOpt, Clone)]
 enum Aggregators {
+    /// Maximum aggregation, returns the most recent date.
     Maximum,
+    /// Minimum aggregation, returns the earliest date.
     Minimum,
+    /// Count aggregation, returns the total number of entires with a valid date.
     Count,
+    /// Split aggregate function, reads data and splits it into multiple files.
+    Split {
+        /// Provide an level to increment on, case insensitive, options include:
+        /// Year, Month, Day, Hour, Minute, Second, Timezone, and (not yet implimented) a plain format string.
+        #[structopt(short = "i", long)]
+        increment: String,
+        /// Simple boolean argument, if used the date will be the prefix to the filename (filename argument will need to be implimented).
+        #[structopt(short = "p", long = "prefix")]
+        date_as_prefix: bool,
+        /// The flatten argument will if provided use only the date time increment selected. (ie. 2021-01-01 01:02:03, Hour -> 01)
+        #[structopt(short, long)]
+        flatten: bool,
+        /// The directory split files are saved to.
+        #[structopt(short = "d", long = "directory", parse(from_os_str))]
+        output_directory: PathBuf,
+    },
 }
 
 fn main() {
@@ -144,6 +143,23 @@ fn main() {
         }
         Aggregators::Count => {
             let mut aggregator = CountAggregator::default();
+            run(source, parser, &mut aggregator, &opt);
+            let _ = aggregator.output();
+        }
+        Aggregators::Split {
+            increment,
+            date_as_prefix,
+            flatten,
+            output_directory,
+        } => {
+            let mut aggregator =
+                match SplitAggregator::new(increment, date_as_prefix, flatten, output_directory) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        error!("Error whilst creating aggregator: {}", e);
+                        std::process::exit(1);
+                    }
+                };
             run(source, parser, &mut aggregator, &opt);
             let _ = aggregator.output();
         }

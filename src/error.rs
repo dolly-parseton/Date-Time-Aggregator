@@ -4,6 +4,7 @@
 
 // Crate level result struct wrapping the error enum
 pub type Result<T> = std::result::Result<T, Error>;
+use std::{error::Error as ErrTrait, fmt};
 
 // Crate level error struct
 #[derive(Debug, Clone)]
@@ -19,7 +20,16 @@ pub enum ErrorKind {
     Parser,
     DateTime,
     Timezone,
+    Aggregator,
     Input,
+}
+
+impl ErrTrait for Error {}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Error: {}", self.reason)
+    }
 }
 
 #[cfg(feature = "json-parser")]

@@ -11,18 +11,13 @@
 //! Note: Not selecting an aggregator when running the `dta` binary will pass the data along
 //!
 pub mod max_min;
+pub mod range;
 pub mod split;
 
 use crate::{Data, Result};
 
 pub trait Aggregator {
-    // // Struct returned by the 'output()' function.
-    // type Output;
-    // Update the state of the aggregation.
     fn update(&mut self, data: &Data) -> Result<()>;
-
-    // /// Return the output of the aggregation.
-    // fn output(&self) -> Result<Self::Output>;
 }
 
 pub mod count {

@@ -3,7 +3,6 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 extern crate serde;
-#[cfg(feature = "json-parser")]
 extern crate serde_json;
 pub mod aggregators;
 mod error;
@@ -11,6 +10,7 @@ pub mod input;
 
 use chrono::{DateTime, FixedOffset, NaiveDateTime};
 pub use error::Result;
+// use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct Data {
@@ -57,6 +57,11 @@ impl Data {
             kind: crate::error::ErrorKind::DateTime,
         })
     }
+
+    pub fn as_string(&self) -> Result<String> {
+        use std::str::from_utf8;
+        Ok(from_utf8(&self.raw)?.to_string())
+    }
 }
 
 mod datetime_parsing {
@@ -87,15 +92,10 @@ mod datetime_parsing {
                         Some(h) => Some(h.as_str().parse()?),
                         None => None,
                     };
-
-                    if is_east.is_some() && hours.is_some() && minutes.is_some() {
-                        let timezone = match is_east.unwrap() {
-                            true => FixedOffset::east(
-                                (3600 * hours.unwrap() + 60 * minutes.unwrap()).into(),
-                            ),
-                            false => FixedOffset::west(
-                                (3600 * hours.unwrap() + 60 * minutes.unwrap()).into(),
-                            ),
+                    if let (Some(e), Some(h), Some(m)) = (is_east, hours, minutes) {
+                        let timezone = match e {
+                            true => FixedOffset::east((3600 * h + 60 * m).into()),
+                            false => FixedOffset::west((3600 * h + 60 * m).into()),
                         };
                         debug!("Parsed timezone {} from {}", timezone, tz_str);
                         return Ok(timezone);
@@ -106,12 +106,13 @@ mod datetime_parsing {
         }
         let err = crate::error::Error {
             reason: match tz {
-                Some(tz_str) => format!("Could not convert \"{}\" into a timezone", tz_str),
-                None => format!("Could not parse a timezone because no format provided."),
+                Some(tz_str) => {
+                    format!("Could not convert \"{}\" into a timezone", tz_str)
+                }
+                None => "Could not parse a timezone because no format provided.".to_string(),
             },
             kind: crate::error::ErrorKind::Timezone,
         };
-        error!("Failed to parse timezone: {}", err.reason);
         Err(err)
     }
     /// Parse Integer Timestamps, not currently in use.
@@ -126,19 +127,7 @@ mod datetime_parsing {
             None => None,
         }
     }
-    // pub fn parse_naive_integer(i: i64, n: i64,  tz: Option<&String>) -> Result<DateTime<FixedOffset>> {
-    //     use std::convert::TryInto;
-    //     match NaiveDateTime::from_timestamp_opt(i, n.try_into()?) {
-    //         Some(dt) => Ok(DateTime::from_utc(dt, parse_fixed_offset(tz)?)),
-    //         None => Err(crate::error::Error {
-    //             reason: format!(
-    //                 "Could not construct a timestamp from {} seconds and {} nanoseconds.",
-    //                 i, n
-    //             ),
-    //             kind: crate::error::ErrorKind::DateTime,
-    //         }),
-    //     }
-    // }
+
     /// Parse String Timestamp. Returns a NaiveDateTime
     pub fn parse_dt(s: &str, f: Option<&String>) -> Option<DateTime<FixedOffset>> {
         match f {
@@ -216,22 +205,18 @@ mod datetime_parsing {
                 }
             }
         }
-        // match tz.is_some() {
-        //     true => Some(DateTime::from_utc(naive_dt, parse_fixed_offset(tz))),
-        //     false => Some(DateTime::from_utc(naive_dt, FixedOffset::east(0))),
-        // }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    //
-    #[test]
-    fn it_works() {
-        println!(
-            "{:?}",
-            chrono::NaiveDateTime::parse_from_str("2020-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-                .unwrap()
-        )
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     //
+//     #[test]
+//     fn it_works() {
+//         println!(
+//             "{:?}",
+//             chrono::NaiveDateTime::parse_from_str("2020-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+//                 .unwrap()
+//         )
+//     }
+// }

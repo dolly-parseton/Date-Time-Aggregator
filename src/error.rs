@@ -32,7 +32,6 @@ impl fmt::Display for Error {
     }
 }
 
-#[cfg(feature = "json-parser")]
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
         Self {
@@ -42,7 +41,6 @@ impl From<serde_json::Error> for Error {
     }
 }
 
-#[cfg(feature = "csv-parser")]
 impl From<csv::Error> for Error {
     fn from(err: csv::Error) -> Self {
         Self {
@@ -52,7 +50,6 @@ impl From<csv::Error> for Error {
     }
 }
 
-#[cfg(feature = "file-input")]
 impl From<glob::PatternError> for Error {
     fn from(err: glob::PatternError) -> Self {
         Self {
@@ -62,7 +59,6 @@ impl From<glob::PatternError> for Error {
     }
 }
 
-#[cfg(feature = "file-input")]
 impl From<glob::GlobError> for Error {
     fn from(err: glob::GlobError) -> Self {
         Self {
@@ -72,7 +68,6 @@ impl From<glob::GlobError> for Error {
     }
 }
 
-#[cfg(feature = "file-input")]
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
         Self {
@@ -102,6 +97,15 @@ impl From<std::num::ParseIntError> for Error {
 
 impl From<chrono::format::ParseError> for Error {
     fn from(err: chrono::format::ParseError) -> Self {
+        Self {
+            reason: format!("{}", err),
+            kind: ErrorKind::DateTime,
+        }
+    }
+}
+
+impl From<std::str::Utf8Error> for Error {
+    fn from(err: std::str::Utf8Error) -> Self {
         Self {
             reason: format!("{}", err),
             kind: ErrorKind::DateTime,

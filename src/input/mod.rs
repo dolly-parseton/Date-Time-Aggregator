@@ -6,13 +6,9 @@
 //! If no file input is select data is read line by line from standard input
 
 // Add in CSV and JSON inputs if feature selected
-#[cfg(feature = "csv-parser")]
 pub mod csv;
-#[cfg(feature = "file-input")]
 pub mod file;
-#[cfg(feature = "json-parser")]
 pub mod json;
-#[cfg(feature = "stdin-input")]
 pub mod stdin;
 
 // Uses
@@ -60,9 +56,9 @@ pub mod simple {
         ) -> Result<Data> {
             // Parse raw data back into a string
             use std::str;
-            match str::from_utf8(&raw.clone()) {
+            match str::from_utf8(&raw) {
                 Ok(t) => {
-                    let data = Data::new(t, fmt, tz, raw)?;
+                    let data = Data::new(t, fmt, tz, raw.to_vec())?;
                     debug!("Parsed data from raw bytes: {:?}", data);
                     Ok(data)
                 }

@@ -2,6 +2,7 @@
 //!
 //! The Json parser is used to read in data from a Json source and parse out a date time field to be used in aggregation.
 //!
+//! Todo: Add nested field support (recursive function that runs when there is a '.' in the field string provided).
 use crate::{
     error::{Error, ErrorKind},
     input::Parser,
@@ -45,7 +46,6 @@ impl Parser for JsonParser {
         match serde_json::from_str::<serde_json::Value>(data) {
             Ok(v) => {
                 if let Some(ts_value) = v.get(&self.field) {
-                    println!("{:?}", ts_value);
                     if let Some(ts_str) = ts_value.as_str() {
                         let data = Data::new(ts_str, fmt, tz, raw)?;
                         debug!("Parsed data from raw bytes: {:?}", data);
@@ -57,7 +57,7 @@ impl Parser for JsonParser {
                     kind: ErrorKind::Parser,
                 };
                 error!("Error occured during parsing: {:?}", err);
-                return Err(err);
+                Err(err)
             }
             Err(e) => {
                 let err = Error {

@@ -21,7 +21,7 @@ $ cat timestamps | dta minimum -d "%Y-%m-%dT%H:%M:%S"
 
 Features included:
 * Range*
-* Split*
+* Split
 * Minimum, Maximum
 * Count
 * Flatten* **

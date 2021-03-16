@@ -17,6 +17,7 @@ use date_time_aggregator::{
     aggregators::{
         count::CountAggregator,
         max_min::{MaximumAggregator, MinimumAggregator},
+        range::RangeAggregator,
         split::SplitAggregator,
         Aggregator,
     },
@@ -74,19 +75,21 @@ enum Aggregators {
     Count,
     /// Split aggregate function, reads data and splits it into multiple files.
     Split {
-        /// Provide an level to increment on, case insensitive, options include:
-        /// Year, Month, Day, Hour, Minute, Second, Timezone, and (not yet implimented) a plain format string.
-        #[structopt(short = "i", long)]
-        increment: String,
-        /// Simple boolean argument, if used the date will be the prefix to the filename (filename argument will need to be implimented).
-        #[structopt(short = "p", long = "prefix")]
-        date_as_prefix: bool,
-        /// The flatten argument will if provided use only the date time increment selected. (ie. 2021-01-01 01:02:03, Hour -> 01)
-        #[structopt(short, long)]
-        flatten: bool,
         /// The directory split files are saved to.
         #[structopt(short = "d", long = "directory", parse(from_os_str))]
         output_directory: PathBuf,
+        /// Provide a filename including date time format options, this is run against the relevant timestamp.
+        /// The resulting string is used as the filename that data is sent to.
+        #[structopt(short = "i", long)]
+        filename: String,
+    },
+    Range {
+        /// The start of the range being selected.
+        #[structopt(short, long)]
+        start: String,
+        /// The end of the range being selected.
+        #[structopt(short, long)]
+        end: Option<String>,
     },
 }
 
@@ -109,7 +112,7 @@ fn main() {
         Some(ref g) => match FileSource::new(&g, true) {
             Ok(s) => (Box::new(s) as Box<dyn Source>),
             Err(e) => {
-                error!("Error whilst creating source: {}", e.reason);
+                eprintln!("Error whilst creating source: {}", e.reason);
                 std::process::exit(1);
             }
         },
@@ -119,10 +122,7 @@ fn main() {
     let parser: Box<dyn Parser> = match (opt.csv.as_ref(), opt.json.as_ref()) {
         (Some(_c), Some(_j)) => {
             // Error
-            error!(
-                "Error whilst creating parser: {}",
-                "You can select either CSV or JSON"
-            );
+            eprintln!("Error whilst creating parser: You can select either CSV or JSON");
             std::process::exit(1);
         }
         (Some(c), None) => (Box::new(CsvParser::new(*c)) as Box<dyn Parser>),
@@ -134,34 +134,51 @@ fn main() {
         Aggregators::Maximum => {
             let mut aggregator = MaximumAggregator::default();
             run(source, parser, &mut aggregator, &opt);
-            let _ = aggregator.output();
+            let r = aggregator.output();
+            if let Ok(Some(d)) = r {
+                println!("{}", d.as_string().unwrap());
+            } else {
+                eprintln!("Unable to return data from Maximum");
+            }
         }
         Aggregators::Minimum => {
             let mut aggregator = MinimumAggregator::default();
             run(source, parser, &mut aggregator, &opt);
-            let _ = aggregator.output();
+            let r = aggregator.output();
+            println!("Minimum: {:?}", r);
         }
         Aggregators::Count => {
             let mut aggregator = CountAggregator::default();
             run(source, parser, &mut aggregator, &opt);
-            let _ = aggregator.output();
+            let r = aggregator.output();
+            println!("Count: {:?}", r);
         }
         Aggregators::Split {
-            increment,
-            date_as_prefix,
-            flatten,
             output_directory,
+            filename,
         } => {
-            let mut aggregator =
-                match SplitAggregator::new(increment, date_as_prefix, flatten, output_directory) {
-                    Ok(a) => a,
-                    Err(e) => {
-                        error!("Error whilst creating aggregator: {}", e);
-                        std::process::exit(1);
-                    }
-                };
+            let mut aggregator = match SplitAggregator::new(output_directory, filename) {
+                Ok(a) => a,
+                Err(e) => {
+                    eprintln!("Error whilst creating aggregator: {}", e);
+                    std::process::exit(1);
+                }
+            };
             run(source, parser, &mut aggregator, &opt);
-            let _ = aggregator.output();
+            let r = aggregator.output();
+            println!("{:?}", r);
+        }
+        Aggregators::Range { start, end } => {
+            let mut aggregator = match RangeAggregator::new(start, end) {
+                Ok(a) => a,
+                Err(e) => {
+                    eprintln!("Error whilst creating aggregator: {}", e);
+                    std::process::exit(1);
+                }
+            };
+            run(source, parser, &mut aggregator, &opt);
+            let r = aggregator.output();
+            println!("{:?}", r);
         }
     };
 }
@@ -179,10 +196,10 @@ fn run<A: Aggregator>(
         match parser.parse_data(r, opt.date_format.as_ref(), opt.timezone.as_ref()) {
             Ok(d) => {
                 if let Err(e) = aggregator.update(&d) {
-                    error!("Error occured in parsing: {:?}", e)
+                    eprintln!("Error occured in parsing: {:?}", e)
                 }
             }
-            Err(e) => error!("Error occured in parsing: {:?}", e),
+            Err(e) => eprintln!("Error occured in parsing: {:?}", e),
         }
     }
 }

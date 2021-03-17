@@ -17,6 +17,8 @@ use std::{fs, path::PathBuf};
 pub struct SplitAggregator {
     output_directory: PathBuf,
     filename: String,
+    created_files: Vec<PathBuf>,
+    data_written_to_file: bool,
 }
 
 impl Aggregator for SplitAggregator {
@@ -24,6 +26,8 @@ impl Aggregator for SplitAggregator {
         let path = self
             .output_directory
             .join(data.timestamp.format(&self.filename).to_string());
+        self.created_files.push(path.clone());
+        self.created_files.dedup();
         if self.filename.contains('/') {
             if let Some(parent) = path.parent() {
                 fs::create_dir_all(&parent)?;
@@ -38,6 +42,7 @@ impl Aggregator for SplitAggregator {
         use std::io::Write;
         let len = file.write(&data.raw)?;
         let _ = file.write(b"\n")?;
+        self.data_written_to_file = true;
         //
         debug!(
             "Written {} bytes to {}/{}",
@@ -50,6 +55,15 @@ impl Aggregator for SplitAggregator {
         );
         Ok(())
     }
+    fn return_value(&self) -> Result<String> {
+        match self.output() {
+            Ok(()) => Ok(format!(
+                "Completed split, files created: {:#?}\n",
+                self.created_files
+            )),
+            Err(e) => Err(e),
+        }
+    }
 }
 
 impl SplitAggregator {
@@ -61,6 +75,8 @@ impl SplitAggregator {
         Ok(Self {
             output_directory,
             filename,
+            created_files: Vec::new(),
+            data_written_to_file: false,
         })
     }
 

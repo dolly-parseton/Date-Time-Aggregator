@@ -90,6 +90,9 @@ enum Aggregators {
         /// The end of the range being selected.
         #[structopt(short, long)]
         end: Option<String>,
+        /// Match on everything outside of the range provided.
+        #[structopt(short, long)]
+        inverted: bool,
     },
 }
 
@@ -108,7 +111,7 @@ fn main() {
     }
 
     // Match based on the command line options to decide what todo.
-    let source: Box<dyn Source> = match opt.glob {
+    let mut source: Box<dyn Source> = match opt.glob {
         Some(ref g) => match FileSource::new(&g, true) {
             Ok(s) => (Box::new(s) as Box<dyn Source>),
             Err(e) => {
@@ -130,65 +133,32 @@ fn main() {
         (None, None) => (Box::new(SimpleParser::default()) as Box<dyn Parser>),
     };
 
-    match opt.aggregator.clone() {
-        Aggregators::Maximum => {
-            let mut aggregator = MaximumAggregator::default();
-            run(source, parser, &mut aggregator, &opt);
-            let r = aggregator.output();
-            if let Ok(Some(d)) = r {
-                println!("{}", d.as_string().unwrap());
-            } else {
-                eprintln!("Unable to return data from Maximum");
-            }
-        }
-        Aggregators::Minimum => {
-            let mut aggregator = MinimumAggregator::default();
-            run(source, parser, &mut aggregator, &opt);
-            let r = aggregator.output();
-            println!("Minimum: {:?}", r);
-        }
-        Aggregators::Count => {
-            let mut aggregator = CountAggregator::default();
-            run(source, parser, &mut aggregator, &opt);
-            let r = aggregator.output();
-            println!("Count: {:?}", r);
-        }
+    let mut aggregator: Box<dyn Aggregator> = match opt.aggregator.clone() {
+        Aggregators::Maximum => Box::new(MaximumAggregator::default()),
+        Aggregators::Minimum => Box::new(MinimumAggregator::default()),
+        Aggregators::Count => Box::new(CountAggregator::default()),
         Aggregators::Split {
             output_directory,
             filename,
-        } => {
-            let mut aggregator = match SplitAggregator::new(output_directory, filename) {
-                Ok(a) => a,
-                Err(e) => {
-                    eprintln!("Error whilst creating aggregator: {}", e);
-                    std::process::exit(1);
-                }
-            };
-            run(source, parser, &mut aggregator, &opt);
-            let r = aggregator.output();
-            println!("{:?}", r);
-        }
-        Aggregators::Range { start, end } => {
-            let mut aggregator = match RangeAggregator::new(start, end) {
-                Ok(a) => a,
-                Err(e) => {
-                    eprintln!("Error whilst creating aggregator: {}", e);
-                    std::process::exit(1);
-                }
-            };
-            run(source, parser, &mut aggregator, &opt);
-            let r = aggregator.output();
-            println!("{:?}", r);
-        }
+        } => match SplitAggregator::new(output_directory, filename) {
+            Ok(a) => Box::new(a),
+            Err(e) => {
+                eprintln!("Error whilst creating aggregator: {}", e);
+                std::process::exit(1);
+            }
+        },
+        Aggregators::Range {
+            start,
+            end,
+            inverted,
+        } => match RangeAggregator::new(start, end, inverted) {
+            Ok(a) => Box::new(a) as Box<dyn Aggregator>,
+            Err(e) => {
+                eprintln!("Error whilst creating aggregator: {}", e);
+                std::process::exit(1);
+            }
+        },
     };
-}
-
-fn run<A: Aggregator>(
-    mut source: Box<dyn Source>,
-    parser: Box<dyn Parser>,
-    aggregator: &mut A,
-    opt: &Opt,
-) {
     while let Ok(r) = source.read_data() {
         if r.is_empty() {
             break;
@@ -201,5 +171,13 @@ fn run<A: Aggregator>(
             }
             Err(e) => eprintln!("Error occured in parsing: {:?}", e),
         }
+    }
+    match aggregator.return_value() {
+        Ok(r) => {
+            if !r.is_empty() {
+                println!("{}", r)
+            }
+        }
+        Err(e) => eprintln!("{}", e),
     }
 }

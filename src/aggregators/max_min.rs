@@ -3,7 +3,7 @@
 //! The Maximum Aggregator component can be used to find the entry with the most recent timestamp.
 //!
 
-use crate::{aggregators::Aggregator, Data, Result};
+use crate::{aggregators::Aggregator, error, Data, Result};
 
 pub struct MaximumAggregator {
     pub largest: Option<Data>,
@@ -26,6 +26,15 @@ impl Aggregator for MaximumAggregator {
             self.largest = Some(data.clone());
         }
         Ok(())
+    }
+    fn return_value(&self) -> Result<String> {
+        match self.output()? {
+            Some(d) => d.as_string(),
+            None => Err(error::Error {
+                reason: "Aggregator did not return a value".to_string(),
+                kind: error::ErrorKind::Aggregator,
+            }),
+        }
     }
 }
 
@@ -59,6 +68,15 @@ impl Aggregator for MinimumAggregator {
             self.smallest = Some(data.clone());
         }
         Ok(())
+    }
+    fn return_value(&self) -> Result<String> {
+        match self.output()? {
+            Some(d) => d.as_string(),
+            None => Err(error::Error {
+                reason: "Aggregator did not return a value".to_string(),
+                kind: error::ErrorKind::Aggregator,
+            }),
+        }
     }
 }
 

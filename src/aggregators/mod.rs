@@ -18,6 +18,7 @@ use crate::{Data, Result};
 
 pub trait Aggregator {
     fn update(&mut self, data: &Data) -> Result<()>;
+    fn return_value(&self) -> Result<String>;
 }
 
 pub mod count {
@@ -35,6 +36,9 @@ pub mod count {
             self.n += 1;
             debug!("Updated Maximum Aggregator State: {:?}", self.n);
             Ok(())
+        }
+        fn return_value(&self) -> Result<String> {
+            Ok(format!("Count: {}", self.n))
         }
     }
 

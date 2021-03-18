@@ -84,11 +84,4 @@ impl RangeAggregator {
             data_written_to_file: false,
         })
     }
-
-    // pub fn output(&self) -> Result<()> {
-    //     // Read the in_range data and the temp_file data.
-    //     // Print the data.
-
-    //     Ok(())
-    // }
 }

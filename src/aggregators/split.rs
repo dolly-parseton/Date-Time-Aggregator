@@ -2,13 +2,6 @@
 //!
 //! The Split Aggregator component can be used to split data being provided into different date increments.
 //! Options for the increment enum include:
-//! * Year
-//! * Month
-//! * Day
-//! * Hour
-//! * Minute
-//! * Second
-//! * Timezone
 //! The increment option of the [`SplitAggregator::new()`](SplitAggregator::new()) function accepts a string of any case matching the above options.
 //! [`SplitAggregator::new()`](SplitAggregator::new()) also accepts and option to flatten the resulting data so data with a timestamp of 2021-01-01 01:00:00 with a split increment of "month" will be saved to a file called "./output_directory/01_dta".
 use crate::{aggregators::Aggregator, Data, Result};
@@ -18,7 +11,6 @@ pub struct SplitAggregator {
     output_directory: PathBuf,
     filename: String,
     created_files: Vec<PathBuf>,
-    data_written_to_file: bool,
 }
 
 impl Aggregator for SplitAggregator {
@@ -42,7 +34,6 @@ impl Aggregator for SplitAggregator {
         use std::io::Write;
         let len = file.write(&data.raw)?;
         let _ = file.write(b"\n")?;
-        self.data_written_to_file = true;
         //
         debug!(
             "Written {} bytes to {}/{}",
@@ -56,13 +47,17 @@ impl Aggregator for SplitAggregator {
         Ok(())
     }
     fn return_value(&self) -> Result<String> {
-        match self.output() {
-            Ok(()) => Ok(format!(
-                "Completed split, files created: {:#?}\n",
-                self.created_files
-            )),
-            Err(e) => Err(e),
-        }
+        // match self.output() {
+        //     Ok(()) => Ok(format!(
+        //         "Completed split, files created: {:#?}\n",
+        //         self.created_files
+        //     )),
+        //     Err(e) => Err(e),
+        // }
+        Ok(format!(
+            "Completed split, files created: {:#?}",
+            self.created_files
+        ))
     }
 }
 
@@ -76,14 +71,13 @@ impl SplitAggregator {
             output_directory,
             filename,
             created_files: Vec::new(),
-            data_written_to_file: false,
         })
     }
 
-    /// Return the output of the aggregation
-    pub fn output(&self) -> Result<()> {
-        // debug!("Maximum Aggregator returning output: {:?}", self.largest);
-        // Ok(self.largest.clone())
-        Ok(())
-    }
+    // /// Return the output of the aggregation
+    // pub fn output(&self) -> Result<()> {
+    //     // debug!("Maximum Aggregator returning output: {:?}", self.largest);
+    //     // Ok(self.largest.clone())
+    //     Ok(())
+    // }
 }

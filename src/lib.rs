@@ -2,6 +2,7 @@
 extern crate log;
 #[macro_use]
 extern crate lazy_static;
+extern crate regex;
 extern crate serde;
 extern crate serde_json;
 pub mod aggregators;
@@ -10,7 +11,7 @@ pub mod input;
 
 use chrono::{DateTime, FixedOffset, NaiveDateTime};
 pub use error::Result;
-// use std::fmt;
+use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct Data {
@@ -60,7 +61,16 @@ impl Data {
 
     pub fn as_string(&self) -> Result<String> {
         use std::str::from_utf8;
-        Ok(from_utf8(&self.raw)?.to_string())
+        Ok(from_utf8(&self.raw)?.trim_end_matches('\n').to_string())
+    }
+}
+
+impl fmt::Display for Data {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.as_string() {
+            Ok(s) => write!(f, "{}", s),
+            Err(e) => write!(f, "{}", e),
+        }
     }
 }
 

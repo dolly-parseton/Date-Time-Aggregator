@@ -22,6 +22,7 @@ pub enum ErrorKind {
     Timezone,
     Aggregator,
     Input,
+    Increment,
 }
 
 impl ErrTrait for Error {}
@@ -50,6 +51,15 @@ impl From<csv::Error> for Error {
     }
 }
 
+impl From<regex::Error> for Error {
+    fn from(err: regex::Error) -> Self {
+        Self {
+            reason: format!("{}", err),
+            kind: ErrorKind::Parser,
+        }
+    }
+}
+
 impl From<glob::PatternError> for Error {
     fn from(err: glob::PatternError) -> Self {
         Self {
@@ -64,6 +74,15 @@ impl From<glob::GlobError> for Error {
         Self {
             reason: format!("{}", err),
             kind: ErrorKind::Parser,
+        }
+    }
+}
+
+impl From<chrono::RoundingError> for Error {
+    fn from(err: chrono::RoundingError) -> Self {
+        Self {
+            reason: format!("{}", err),
+            kind: ErrorKind::Increment,
         }
     }
 }

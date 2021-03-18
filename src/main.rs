@@ -15,8 +15,9 @@ use date_time_aggregator::input::stdin::StdinSource;
 // Imports
 use date_time_aggregator::{
     aggregators::{
-        count::CountAggregator,
-        max_min::{MaximumAggregator, MinimumAggregator},
+        count::{CountAggregator, CountsAggregator},
+        max::{MaximumAggregator, MaximumsAggregator},
+        min::{MinimumAggregator, MinimumsAggregator},
         range::RangeAggregator,
         split::SplitAggregator,
         Aggregator,
@@ -69,10 +70,28 @@ struct Opt {
 enum Aggregators {
     /// Maximum aggregation, returns the most recent date.
     Maximum,
+    /// Maximums aggregation, returns the most recent date for a given increment.
+    Maximums {
+        /// Increment format string (Increment formats YYYY-MM-DD or HH:MM:SS or YYYY-MM-DD HH:MM:SS).
+        #[structopt(short, long)]
+        increment: String,
+    },
     /// Minimum aggregation, returns the earliest date.
     Minimum,
+    /// Minimums aggregation, returns the earliest date for a given increment.
+    Minimums {
+        /// Increment format string (Increment formats YYYY-MM-DD or HH:MM:SS or YYYY-MM-DD HH:MM:SS).
+        #[structopt(short, long)]
+        increment: String,
+    },
     /// Count aggregation, returns the total number of entires with a valid date.
     Count,
+    /// Counts aggregation, returns the counts of data for a given increment.
+    Counts {
+        /// Increment format string (Increment formats YYYY-MM-DD or HH:MM:SS or YYYY-MM-DD HH:MM:SS).
+        #[structopt(short, long)]
+        increment: String,
+    },
     /// Split aggregate function, reads data and splits it into multiple files.
     Split {
         /// The directory split files are saved to.
@@ -135,8 +154,29 @@ fn main() {
 
     let mut aggregator: Box<dyn Aggregator> = match opt.aggregator.clone() {
         Aggregators::Maximum => Box::new(MaximumAggregator::default()),
+        Aggregators::Maximums { increment } => match MaximumsAggregator::new(increment) {
+            Ok(a) => Box::new(a),
+            Err(e) => {
+                eprintln!("Error whilst creating aggregator: {}", e);
+                std::process::exit(1);
+            }
+        },
         Aggregators::Minimum => Box::new(MinimumAggregator::default()),
+        Aggregators::Minimums { increment } => match MinimumsAggregator::new(increment) {
+            Ok(a) => Box::new(a),
+            Err(e) => {
+                eprintln!("Error whilst creating aggregator: {}", e);
+                std::process::exit(1);
+            }
+        },
         Aggregators::Count => Box::new(CountAggregator::default()),
+        Aggregators::Counts { increment } => match CountsAggregator::new(increment) {
+            Ok(a) => Box::new(a),
+            Err(e) => {
+                eprintln!("Error whilst creating aggregator: {}", e);
+                std::process::exit(1);
+            }
+        },
         Aggregators::Split {
             output_directory,
             filename,

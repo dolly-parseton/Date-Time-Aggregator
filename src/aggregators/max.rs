@@ -3,7 +3,12 @@
 //! The Maximum Aggregator component can be used to find the entry with the most recent timestamp.
 //!
 
-use crate::{aggregators::Aggregator, error, Data, Result};
+use crate::{
+    aggregators::{Aggregator, Increment},
+    error, Data, Result,
+};
+use chrono::{DateTime, FixedOffset};
+use std::{collections::HashMap, convert::TryFrom};
 
 pub struct MaximumAggregator {
     pub largest: Option<Data>,
@@ -47,42 +52,45 @@ impl MaximumAggregator {
 
 //
 
-pub struct MinimumAggregator {
-    pub smallest: Option<Data>,
+pub struct MaximumsAggregator {
+    pub largests: HashMap<DateTime<FixedOffset>, Data>,
+    pub increment: Increment,
 }
 
-impl Default for MinimumAggregator {
-    fn default() -> Self {
-        Self { smallest: None }
-    }
-}
-
-impl Aggregator for MinimumAggregator {
+impl Aggregator for MaximumsAggregator {
     fn update(&mut self, data: &Data) -> Result<()> {
-        if let Some(smallest) = &self.smallest {
-            if smallest.timestamp < data.timestamp {
-                self.smallest = Some(data.clone());
-                debug!("Updated Maximum Aggregator State: {:?}", self.smallest);
+        let rounded = self.increment.rounded(data.timestamp.clone())?;
+
+        match self.largests.remove(&rounded) {
+            Some(l) => {
+                if l.timestamp <= data.timestamp {
+                    self.largests.insert(rounded, data.clone());
+                }
             }
-        } else {
-            self.smallest = Some(data.clone());
-        }
+            None => {
+                self.largests.insert(rounded, data.clone());
+            }
+        };
         Ok(())
     }
     fn return_value(&self) -> Result<String> {
-        match self.output()? {
-            Some(d) => d.as_string(),
-            None => Err(error::Error {
-                reason: "Aggregator did not return a value".to_string(),
-                kind: error::ErrorKind::Aggregator,
-            }),
+        let mut pretty: String = String::new();
+        for (_k, v) in self.largests.iter() {
+            pretty.push_str(&format!("\n{}", v.as_string()?));
         }
+        Ok(format!("Maximums for increment: {}", pretty))
     }
 }
 
-impl MinimumAggregator {
-    pub fn output(&self) -> Result<Option<Data>> {
-        debug!("Minimum Aggregator returning output: {:?}", self.smallest);
-        Ok(self.smallest.clone())
+impl MaximumsAggregator {
+    pub fn new(increment: String) -> Result<Self> {
+        Ok(Self {
+            increment: Increment::try_from(increment)?,
+            largests: HashMap::new(),
+        })
+    }
+    pub fn output(&self) -> Result<HashMap<DateTime<FixedOffset>, Data>> {
+        debug!("Maximum Aggregator returning output: {:#?}", self.largests);
+        Ok(self.largests.clone())
     }
 }

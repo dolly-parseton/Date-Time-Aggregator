@@ -41,6 +41,10 @@ struct Opt {
     #[structopt(long = "directory", short = "R")]
     glob: Option<String>,
 
+    /// Provide either a YAML file or a directory containing YAML files (.yml) that match the FormatDictionary structure.
+    #[structopt(long = "formats", short = "F")]
+    formats: Option<PathBuf>,
+
     /// Parse CSV data, supply a valid position for the timestamp field (starting at 0).
     #[structopt(short, long)]
     csv: Option<u8>,
@@ -129,6 +133,17 @@ fn main() {
         debug!("Command line options provided: {:#?}", opt);
     }
 
+    let mut formats = match opt.formats {
+        None => None,
+        Some(f) => match date_time_aggregator::FormatDictionary::from_file(f) {
+            Ok(f) => Some(f),
+            Err(e) => {
+                eprintln!("Error whilst creating Format Dictionary: {}", e.reason);
+                std::process::exit(1);
+            }
+        },
+    };
+
     // Match based on the command line options to decide what todo.
     let mut source: Box<dyn Source> = match opt.glob {
         Some(ref g) => match FileSource::new(&g, true) {
@@ -203,7 +218,12 @@ fn main() {
         if r.is_empty() {
             break;
         }
-        match parser.parse_data(r, opt.date_format.as_ref(), opt.timezone.as_ref()) {
+        match parser.parse_data(
+            r,
+            opt.date_format.as_ref(),
+            opt.timezone.as_ref(),
+            formats.as_mut(),
+        ) {
             Ok(d) => {
                 if let Err(e) = aggregator.update(&d) {
                     eprintln!("Error occured in parsing: {:?}", e)

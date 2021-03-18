@@ -30,6 +30,13 @@ pub trait Aggregator {
 #[derive(Debug)]
 pub struct Increment {
     duration: Duration,
+    r#type: IncrementType,
+}
+#[derive(Debug)]
+pub enum IncrementType {
+    Date,
+    Time,
+    DateTime,
 }
 
 impl Increment {
@@ -40,8 +47,10 @@ impl Increment {
         hours: i64,
         minutes: i64,
         seconds: i64,
+        r#type: IncrementType,
     ) -> Self {
         Self {
+            r#type,
             duration: Duration::weeks(years * 52)
                 + Duration::days(months * 30)
                 + Duration::days(days)
@@ -50,9 +59,14 @@ impl Increment {
                 + Duration::seconds(seconds),
         }
     }
+
     pub fn rounded(&self, dt: DateTime<FixedOffset>) -> Result<DateTime<FixedOffset>> {
         use chrono::DurationRound;
-        Ok(dt.duration_round(self.duration)?)
+        match self.r#type {
+            IncrementType::Date => Ok(dt.duration_trunc(self.duration)?),
+            IncrementType::Time => Ok(dt.duration_trunc(self.duration)?),
+            IncrementType::DateTime => Ok(dt.duration_trunc(self.duration)?),
+        }
         // Ok(dt)
     }
 }
@@ -89,6 +103,7 @@ impl TryFrom<String> for Increment {
                         hours.as_str().parse()?,
                         minutes.as_str().parse()?,
                         seconds.as_str().parse()?,
+                        IncrementType::DateTime,
                     ));
                 }
             }
@@ -104,6 +119,7 @@ impl TryFrom<String> for Increment {
                         hours.as_str().parse()?,
                         minutes.as_str().parse()?,
                         seconds.as_str().parse()?,
+                        IncrementType::Time,
                     ));
                 }
             }
@@ -119,6 +135,7 @@ impl TryFrom<String> for Increment {
                         0,
                         0,
                         0,
+                        IncrementType::Date,
                     ));
                 }
             }

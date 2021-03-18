@@ -20,7 +20,13 @@ impl CsvParser {
 }
 
 impl Parser for CsvParser {
-    fn parse_data(&self, raw: Vec<u8>, fmt: Option<&String>, tz: Option<&String>) -> Result<Data> {
+    fn parse_data(
+        &self,
+        raw: Vec<u8>,
+        fmt: Option<&String>,
+        tz: Option<&String>,
+        dict: Option<&mut crate::FormatDictionary>,
+    ) -> Result<Data> {
         // Parse raw data back into a string
         use std::str;
         let data = match str::from_utf8(&raw[..]) {
@@ -40,7 +46,11 @@ impl Parser for CsvParser {
         if let Some(res) = reader.records().next() {
             let v: csv::StringRecord = res?;
             if let Some(ts_str) = v.get(self.level as usize) {
-                let data = Data::new(&ts_str, fmt, tz, raw)?;
+                let data = match dict {
+                    Some(d) => Data::from_dict(&ts_str, raw, tz, d)?,
+                    None => Data::new(&ts_str, fmt, tz, raw)?,
+                };
+
                 debug!("Parsed data from raw bytes: {:?}", data);
                 return Ok(data);
             }

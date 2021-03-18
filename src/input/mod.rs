@@ -26,9 +26,9 @@ pub trait Parser {
     fn parse_data(
         &self,
         raw: Vec<u8>,
-        // field: Option<&String>,
         fmt: Option<&String>,
         tz: Option<&String>,
+        dict: Option<&mut crate::FormatDictionary>,
     ) -> Result<Data>;
 }
 
@@ -50,15 +50,18 @@ pub mod simple {
         fn parse_data(
             &self,
             raw: Vec<u8>,
-            // _field: Option<&String>,
             fmt: Option<&String>,
             tz: Option<&String>,
+            dict: Option<&mut crate::FormatDictionary>,
         ) -> Result<Data> {
             // Parse raw data back into a string
             use std::str;
             match str::from_utf8(&raw) {
                 Ok(t) => {
-                    let data = Data::new(t, fmt, tz, raw.to_vec())?;
+                    let data = match dict {
+                        Some(d) => Data::from_dict(&t, raw.clone(), tz, d)?,
+                        None => Data::new(&t, fmt, tz, raw.clone())?,
+                    };
                     debug!("Parsed data from raw bytes: {:?}", data);
                     Ok(data)
                 }

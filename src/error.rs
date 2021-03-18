@@ -41,7 +41,14 @@ impl From<serde_json::Error> for Error {
         }
     }
 }
-
+impl From<serde_yaml::Error> for Error {
+    fn from(err: serde_yaml::Error) -> Self {
+        Self {
+            reason: format!("{}", err),
+            kind: ErrorKind::Parser,
+        }
+    }
+}
 impl From<csv::Error> for Error {
     fn from(err: csv::Error) -> Self {
         Self {

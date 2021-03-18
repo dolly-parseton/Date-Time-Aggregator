@@ -1,0 +1,30 @@
+"DEFAULT_001":
+  fmt: "%Y-%m-%dT%H:%M:%S%.f%:z"
+"DEFAULT_002":
+  fmt: "%Y-%m-%d %H:%M:%S%.f%:z"
+"DEFAULT_003":
+  fmt: "%Y-%m-%dT%H:%M:%S%.f%z"
+"DEFAULT_004":
+  fmt: "%Y-%m-%d %H:%M:%S%.f%z"
+"DEFAULT_005":
+  fmt: "%Y-%m-%dT%H:%M:%S%:z"
+"DEFAULT_006":
+  fmt: "%Y-%m-%d %H:%M:%S%:z"
+"DEFAULT_007":
+  fmt: "%Y-%m-%dT%H:%M:%S%z"
+"DEFAULT_008":
+  fmt: "%Y-%m-%d %H:%M:%S%z"
+"DEFAULT_009":
+  fmt: "%Y-%m-%d %H:%M:%S"
+"DEFAULT_010":
+  fmt: "%Y-%m-%dT%H:%M:%S%.f"
+"DEFAULT_011":
+  fmt: "%Y-%m-%d %H:%M:%S%.f"
+"DEFAULT_012":
+  fmt: "%Y/%m/%dT%H:%M:%S%.f"
+"DEFAULT_013":
+  fmt: "%Y/%m/%d %H:%M:%S%.f"
+"DEFAULT_014":
+  fmt: "%Y/%m/%dT%H:%M:%S%"
+"DEFAULT_015":
+  fmt: "%Y/%m/%d %H:%M:%S%"

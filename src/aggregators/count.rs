@@ -1,6 +1,6 @@
 use crate::{
     aggregators::{Aggregator, Increment},
-    error, Data, Result,
+    Data, Result,
 };
 use chrono::{DateTime, FixedOffset};
 use std::{collections::HashMap, convert::TryFrom};
@@ -51,7 +51,7 @@ impl Aggregator for CountsAggregator {
     fn return_value(&self) -> Result<String> {
         let mut pretty: String = String::new();
         for (k, v) in self.counts.iter() {
-            pretty.push_str(&format!("\n{}: {}", k, v));
+            pretty.push_str(&format!("\n{}: {}", k.with_timezone(&chrono::Utc), v));
         }
         Ok(format!("Maximums for increment: {}", pretty))
     }

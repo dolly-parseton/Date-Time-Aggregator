@@ -28,6 +28,7 @@ impl Parser for JsonParser {
         // field: Option<&String>,
         fmt: Option<&String>,
         tz: Option<&String>,
+        dict: Option<&mut crate::FormatDictionary>,
     ) -> Result<Data> {
         // Parse raw data back into a string
         use std::str;
@@ -47,7 +48,10 @@ impl Parser for JsonParser {
             Ok(v) => {
                 if let Some(ts_value) = v.get(&self.field) {
                     if let Some(ts_str) = ts_value.as_str() {
-                        let data = Data::new(ts_str, fmt, tz, raw)?;
+                        let data = match dict {
+                            Some(mut d) => Data::from_dict(&ts_str, raw, tz, &mut d)?,
+                            None => Data::new(&ts_str, fmt, tz, raw)?,
+                        };
                         debug!("Parsed data from raw bytes: {:?}", data);
                         return Ok(data);
                     }

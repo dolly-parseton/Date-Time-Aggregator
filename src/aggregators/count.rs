@@ -40,7 +40,7 @@ pub struct CountsAggregator {
 
 impl Aggregator for CountsAggregator {
     fn update(&mut self, data: &Data) -> Result<()> {
-        let rounded = self.increment.rounded(data.timestamp.clone())?;
+        let rounded = self.increment.rounded(data.timestamp)?;
 
         match self.counts.remove(&rounded) {
             Some(c) => self.counts.insert(rounded, c + 1),

@@ -29,6 +29,7 @@ impl Parser for JsonParser {
         fmt: Option<&String>,
         tz: Option<&String>,
         dict: Option<&mut crate::FormatDictionary>,
+        transform: Option<&String>,
     ) -> Result<Data> {
         // Parse raw data back into a string
         use std::str;
@@ -45,13 +46,18 @@ impl Parser for JsonParser {
         };
 
         match serde_json::from_str::<serde_json::Value>(data) {
-            Ok(v) => {
+            Ok(mut v) => {
                 if let Some(ts_value) = v.get(&self.field) {
                     if let Some(ts_str) = ts_value.as_str() {
                         let data = match dict {
                             Some(mut d) => Data::from_dict(&ts_str, raw, tz, &mut d)?,
                             None => Data::new(&ts_str, fmt, tz, raw)?,
                         };
+                        // If transform exists modify the value enum and
+                        if let (Some(t), Some(v_mut)) = (transform, v.get_mut(&self.field)) {
+                            let dt = data.timestamp.format(t).to_string();
+                            *v_mut = serde_json::Value::String(dt);
+                        }
                         debug!("Parsed data from raw bytes: {:?}", data);
                         return Ok(data);
                     }

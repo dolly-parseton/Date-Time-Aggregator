@@ -59,7 +59,7 @@ pub struct MaximumsAggregator {
 
 impl Aggregator for MaximumsAggregator {
     fn update(&mut self, data: &Data) -> Result<()> {
-        let rounded = self.increment.rounded(data.timestamp.clone())?;
+        let rounded = self.increment.rounded(data.timestamp)?;
 
         match self.largests.remove(&rounded) {
             Some(l) => {

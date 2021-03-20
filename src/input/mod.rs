@@ -29,6 +29,7 @@ pub trait Parser {
         fmt: Option<&String>,
         tz: Option<&String>,
         dict: Option<&mut crate::FormatDictionary>,
+        transform: Option<&String>,
     ) -> Result<Data>;
 }
 
@@ -53,15 +54,21 @@ pub mod simple {
             fmt: Option<&String>,
             tz: Option<&String>,
             dict: Option<&mut crate::FormatDictionary>,
+            transform: Option<&String>,
         ) -> Result<Data> {
             // Parse raw data back into a string
             use std::str;
             match str::from_utf8(&raw) {
                 Ok(t) => {
-                    let data = match dict {
+                    let mut data = match dict {
                         Some(d) => Data::from_dict(&t, raw.clone(), tz, d)?,
                         None => Data::new(&t, fmt, tz, raw.clone())?,
                     };
+                    // If transform exists modify the value enum and
+                    if let Some(t) = transform {
+                        let dt = data.timestamp.format(t).to_string();
+                        data.raw = dt.as_bytes().to_vec();
+                    }
                     debug!("Parsed data from raw bytes: {:?}", data);
                     Ok(data)
                 }

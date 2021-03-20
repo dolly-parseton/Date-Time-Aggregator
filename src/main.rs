@@ -66,8 +66,8 @@ struct Opt {
     date_format: Option<String>,
 
     /// Convert timestamp being used by the aggregation into the provided format, if none is provided the format will not be changed.
-    #[structopt(long = "convert")]
-    convert_timestamp: Option<String>,
+    #[structopt(short, long)]
+    transform: Option<String>,
 }
 
 #[derive(Debug, PartialEq, StructOpt, Clone)]
@@ -223,6 +223,7 @@ fn main() {
             opt.date_format.as_ref(),
             opt.timezone.as_ref(),
             formats.as_mut(),
+            opt.transform.as_ref(),
         ) {
             Ok(d) => {
                 if let Err(e) = aggregator.update(&d) {

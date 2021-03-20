@@ -59,7 +59,7 @@ pub struct MinimumsAggregator {
 
 impl Aggregator for MinimumsAggregator {
     fn update(&mut self, data: &Data) -> Result<()> {
-        let rounded = self.increment.rounded(data.timestamp.clone())?;
+        let rounded = self.increment.rounded(data.timestamp)?;
 
         match self.smallests.remove(&rounded) {
             Some(s) => {

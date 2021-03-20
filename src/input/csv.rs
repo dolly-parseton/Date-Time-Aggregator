@@ -56,8 +56,6 @@ impl Parser for CsvParser {
                     let new = str::replace(raw_data, ts_str, &dt);
                     data.raw = new.as_bytes().to_vec();
                 }
-                println!("{:?}", data);
-                println!("{:?}", str::from_utf8(&data.raw[..]));
                 debug!("Parsed data from raw bytes: {:?}", data);
                 return Ok(data);
             }

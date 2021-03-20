@@ -49,7 +49,7 @@ impl Parser for JsonParser {
             Ok(mut v) => {
                 if let Some(ts_value) = v.get(&self.field) {
                     if let Some(ts_str) = ts_value.as_str() {
-                        let data = match dict {
+                        let mut data = match dict {
                             Some(mut d) => Data::from_dict(&ts_str, raw, tz, &mut d)?,
                             None => Data::new(&ts_str, fmt, tz, raw)?,
                         };
@@ -57,7 +57,9 @@ impl Parser for JsonParser {
                         if let (Some(t), Some(v_mut)) = (transform, v.get_mut(&self.field)) {
                             let dt = data.timestamp.format(t).to_string();
                             *v_mut = serde_json::Value::String(dt);
+                            data.raw = serde_json::to_string(&v)?.as_bytes().to_vec();
                         }
+
                         debug!("Parsed data from raw bytes: {:?}", data);
                         return Ok(data);
                     }

@@ -1,85 +1,35 @@
-//! # Maximum Aggregator
+//! # Split Aggregator
 //!
-//! The Maximum Aggregator component can be used to find the entry with the most recent timestamp.
-//!
-
-use crate::{aggregators::Aggregator, error, Data, Result};
-use std::{convert::TryFrom, fs, path::PathBuf};
+//! The Split Aggregator component can be used to split data being provided into different date increments.
+//! Options for the increment enum include:
+//! The increment option of the [`SplitAggregator::new()`](SplitAggregator::new()) function accepts a string of any case matching the above options.
+//! [`SplitAggregator::new()`](SplitAggregator::new()) also accepts and option to flatten the resulting data so data with a timestamp of 2021-01-01 01:00:00 with a split increment of "month" will be saved to a file called "./output_directory/01_dta".
+use crate::{aggregators::Aggregator, Data, Result};
+use std::{fs, path::PathBuf};
 
 pub struct SplitAggregator {
-    increment: Increment,
-    date_as_prefix: bool,
-    flatten: bool,
     output_directory: PathBuf,
-}
-
-enum Increment {
-    Year,
-    Month,
-    Day,
-    Hour,
-    Minute,
-    Second,
-    Timezone,
-}
-
-impl TryFrom<&str> for Increment {
-    type Error = error::Error;
-    fn try_from(s: &str) -> Result<Increment> {
-        match s.to_ascii_lowercase().as_str() {
-            "year" => Ok(Increment::Year),
-            "month" => Ok(Increment::Month),
-            "day" => Ok(Increment::Day),
-            "hour" => Ok(Increment::Hour),
-            "minute" => Ok(Increment::Minute),
-            "second" => Ok(Increment::Second),
-            "timezone" => Ok(Increment::Timezone),
-            _ => Err(error::Error {
-                reason: "Invalid split format provided.".to_string(),
-                kind: error::ErrorKind::Aggregator,
-            }),
-        }
-    }
+    filename: String,
+    created_files: Vec<PathBuf>,
 }
 
 impl Aggregator for SplitAggregator {
     fn update(&mut self, data: &Data) -> Result<()> {
-        // Using the Level Enum do a custom format based on the level and use that string in creating a file prefix
-        let formatted = match self.increment {
-            Increment::Year => data.timestamp.format("%y"),
-            Increment::Month => data.timestamp.format(match self.flatten {
-                true => "%m",
-                false => "%y-%m",
-            }),
-            Increment::Day => data.timestamp.format(match self.flatten {
-                true => "%d",
-                false => "%y-%m-%d",
-            }),
-            Increment::Hour => data.timestamp.format(match self.flatten {
-                true => "%H",
-                false => "%y-%m-%dT%H",
-            }),
-            Increment::Minute => data.timestamp.format(match self.flatten {
-                true => "%M",
-                false => "%y-%m-%dT%H:%M",
-            }),
-            Increment::Second => data.timestamp.format(match self.flatten {
-                true => "%S",
-                false => "%y-%m-%dT%H:%M:%S",
-            }),
-            Increment::Timezone => data.timestamp.format("%z"),
+        let path = self
+            .output_directory
+            .join(data.timestamp.format(&self.filename).to_string());
+        self.created_files.push(path.clone());
+        self.created_files.dedup();
+        if self.filename.contains('/') {
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(&parent)?;
+            }
         }
-        .to_string();
-        // Append data to file
-        let file_name = self.output_directory.join(match self.date_as_prefix {
-            true => format!("{}_dta", formatted),
-            false => format!("dta_{}", formatted),
-        });
         let mut file = fs::OpenOptions::new()
             .create(true)
             .read(true)
             .append(true)
-            .open(&file_name)?;
+            .open(&path)?;
         // Write to file
         use std::io::Write;
         let len = file.write(&data.raw)?;
@@ -89,30 +39,45 @@ impl Aggregator for SplitAggregator {
             "Written {} bytes to {}/{}",
             len,
             self.output_directory.display(),
-            file_name.display()
+            &self
+                .output_directory
+                .join(data.timestamp.format(&self.filename).to_string())
+                .display()
         );
         Ok(())
+    }
+    fn return_value(&self) -> Result<String> {
+        // match self.output() {
+        //     Ok(()) => Ok(format!(
+        //         "Completed split, files created: {:#?}\n",
+        //         self.created_files
+        //     )),
+        //     Err(e) => Err(e),
+        // }
+        Ok(format!(
+            "Completed split, files created: {:#?}",
+            self.created_files
+        ))
     }
 }
 
 impl SplitAggregator {
-    pub fn new(
-        increment: String,
-        date_as_prefix: bool,
-        flatten: bool,
-        output_directory: PathBuf,
-    ) -> Result<Self> {
+    /// Function to create a `SplitAggregator`, provide:
+    /// * A string that'll be parsed into an `Increment` (Options listed in module level documentation).
+    /// * A boolean to determine if the filename string is a prefix or suffix to resulting files.
+    /// * A boolean to determine if the dates are flattened in the filename.
+    pub fn new(output_directory: PathBuf, filename: String) -> Result<Self> {
         Ok(Self {
-            increment: Increment::try_from(increment.as_str())?,
-            date_as_prefix,
-            flatten,
             output_directory,
+            filename,
+            created_files: Vec::new(),
         })
     }
 
-    pub fn output(&self) -> Result<()> {
-        // debug!("Maximum Aggregator returning output: {:?}", self.largest);
-        // Ok(self.largest.clone())
-        Ok(())
-    }
+    // /// Return the output of the aggregation
+    // pub fn output(&self) -> Result<()> {
+    //     // debug!("Maximum Aggregator returning output: {:?}", self.largest);
+    //     // Ok(self.largest.clone())
+    //     Ok(())
+    // }
 }

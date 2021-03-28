@@ -2,6 +2,7 @@
 //!
 //! The Json parser is used to read in data from a Json source and parse out a date time field to be used in aggregation.
 //!
+//! Todo: Add nested field support (recursive function that runs when there is a '.' in the field string provided).
 use crate::{
     error::{Error, ErrorKind},
     input::Parser,
@@ -13,8 +14,10 @@ pub struct JsonParser {
 }
 
 impl JsonParser {
-    pub fn new(field: String) -> Self {
-        Self { field }
+    pub fn new(field: &str) -> Self {
+        Self {
+            field: field.to_string(),
+        }
     }
 }
 
@@ -25,6 +28,8 @@ impl Parser for JsonParser {
         // field: Option<&String>,
         fmt: Option<&String>,
         tz: Option<&String>,
+        dict: Option<&mut crate::FormatDictionary>,
+        transform: Option<&String>,
     ) -> Result<Data> {
         // Parse raw data back into a string
         use std::str;
@@ -40,31 +45,42 @@ impl Parser for JsonParser {
             }
         };
 
-        match serde_json::from_str::<serde_json::Value>(data) {
-            Ok(v) => {
-                if let Some(ts_value) = v.get(&self.field) {
-                    println!("{:?}", ts_value);
-                    if let Some(ts_str) = ts_value.as_str() {
-                        let data = Data::new(ts_str, fmt, tz, raw)?;
-                        debug!("Parsed data from raw bytes: {:?}", data);
-                        return Ok(data);
-                    }
+        let value = gjson::get(&data, &self.field);
+        let ts_str = value.str();
+        let mut data = match dict {
+            Some(mut d) => Data::from_dict(&ts_str, data.as_bytes().to_vec(), tz, &mut d)?,
+            None => Data::new(&ts_str, fmt, tz, data.as_bytes().to_vec())?,
+        };
+        // If transform exists modify the value enum and
+        match (
+            transform,
+            serde_json::from_slice::<serde_json::Value>(&data.raw),
+        ) {
+            (Some(t), Ok(mut v)) => match v.get_mut(&self.field) {
+                Some(v_mut) => {
+                    let dt = data.timestamp.format(t).to_string();
+                    *v_mut = serde_json::Value::String(dt);
+                    data.raw = serde_json::to_string(&v)?.as_bytes().to_vec();
+                    Ok(data)
                 }
-                let err = Error {
-                    reason: format!("Could no find a field named {}", self.field),
-                    kind: ErrorKind::Parser,
-                };
-                error!("Error occured during parsing: {:?}", err);
-                return Err(err);
+                None => {
+                    let err = Error {
+                        reason: format!(
+                            "Timestamp ({}) could not be parsed: {}",
+                            &self.field,
+                            data.as_string()?
+                        ),
+                        kind: ErrorKind::Parser,
+                    };
+                    error!("Error occured during parsing: {:?}", err);
+                    Err(err)
+                }
+            },
+            (_, Err(e)) => {
+                error!("Error occured during parsing: {:?}", e);
+                Err(e.into())
             }
-            Err(e) => {
-                let err = Error {
-                    reason: format!("Timestamp could not be parsed: {}", e),
-                    kind: ErrorKind::Parser,
-                };
-                error!("Error occured during parsing: {:?}", err);
-                Err(err)
-            }
+            (None, Ok(_)) => Ok(data),
         }
     }
 }

@@ -6,13 +6,9 @@
 //! If no file input is select data is read line by line from standard input
 
 // Add in CSV and JSON inputs if feature selected
-#[cfg(feature = "csv-parser")]
 pub mod csv;
-#[cfg(feature = "file-input")]
 pub mod file;
-#[cfg(feature = "json-parser")]
 pub mod json;
-#[cfg(feature = "stdin-input")]
 pub mod stdin;
 
 // Uses
@@ -30,9 +26,10 @@ pub trait Parser {
     fn parse_data(
         &self,
         raw: Vec<u8>,
-        // field: Option<&String>,
         fmt: Option<&String>,
         tz: Option<&String>,
+        dict: Option<&mut crate::FormatDictionary>,
+        transform: Option<&String>,
     ) -> Result<Data>;
 }
 
@@ -54,15 +51,24 @@ pub mod simple {
         fn parse_data(
             &self,
             raw: Vec<u8>,
-            // _field: Option<&String>,
             fmt: Option<&String>,
             tz: Option<&String>,
+            dict: Option<&mut crate::FormatDictionary>,
+            transform: Option<&String>,
         ) -> Result<Data> {
             // Parse raw data back into a string
             use std::str;
-            match str::from_utf8(&raw.clone()) {
+            match str::from_utf8(&raw) {
                 Ok(t) => {
-                    let data = Data::new(t, fmt, tz, raw)?;
+                    let mut data = match dict {
+                        Some(d) => Data::from_dict(&t, raw.clone(), tz, d)?,
+                        None => Data::new(&t, fmt, tz, raw.clone())?,
+                    };
+                    // If transform exists modify the data
+                    if let Some(t) = transform {
+                        let dt = data.timestamp.format(t).to_string();
+                        data.raw = dt.as_bytes().to_vec();
+                    }
                     debug!("Parsed data from raw bytes: {:?}", data);
                     Ok(data)
                 }

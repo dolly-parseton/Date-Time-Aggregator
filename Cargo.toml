@@ -12,6 +12,7 @@ path = "src/main.rs"
 [dependencies]
 chrono = {version = "0.4", features = ["serde"]}
 csv = "1.1.6"
+gjson = "0.7"
 glob = "0.3.0"
 lazy_static = "1.4.0"
 log = "0.4.14"

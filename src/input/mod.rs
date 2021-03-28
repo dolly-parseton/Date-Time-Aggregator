@@ -64,7 +64,7 @@ pub mod simple {
                         Some(d) => Data::from_dict(&t, raw.clone(), tz, d)?,
                         None => Data::new(&t, fmt, tz, raw.clone())?,
                     };
-                    // If transform exists modify the value enum and
+                    // If transform exists modify the data
                     if let Some(t) = transform {
                         let dt = data.timestamp.format(t).to_string();
                         data.raw = dt.as_bytes().to_vec();

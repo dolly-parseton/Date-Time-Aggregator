@@ -49,7 +49,7 @@ struct Opt {
     #[structopt(short, long)]
     csv: Option<u8>,
 
-    /// Parse JSON data, field has to be the field name.
+    /// Parse JSON data, field has to be the field name. (`gjson` adds support for nested timestamp fields, use the `gjson` syntax)
     #[structopt(short, long)]
     json: Option<String>,
 

@@ -45,40 +45,42 @@ impl Parser for JsonParser {
             }
         };
 
-        match serde_json::from_str::<serde_json::Value>(data) {
-            Ok(mut v) => {
-                if let Some(ts_value) = v.get(&self.field) {
-                    if let Some(ts_str) = ts_value.as_str() {
-                        let mut data = match dict {
-                            Some(mut d) => Data::from_dict(&ts_str, raw, tz, &mut d)?,
-                            None => Data::new(&ts_str, fmt, tz, raw)?,
-                        };
-                        // If transform exists modify the value enum and
-                        if let (Some(t), Some(v_mut)) = (transform, v.get_mut(&self.field)) {
-                            let dt = data.timestamp.format(t).to_string();
-                            *v_mut = serde_json::Value::String(dt);
-                            data.raw = serde_json::to_string(&v)?.as_bytes().to_vec();
-                        }
-
-                        debug!("Parsed data from raw bytes: {:?}", data);
-                        return Ok(data);
-                    }
+        let value = gjson::get(&data, &self.field);
+        let ts_str = value.str();
+        let mut data = match dict {
+            Some(mut d) => Data::from_dict(&ts_str, data.as_bytes().to_vec(), tz, &mut d)?,
+            None => Data::new(&ts_str, fmt, tz, data.as_bytes().to_vec())?,
+        };
+        // If transform exists modify the value enum and
+        match (
+            transform,
+            serde_json::from_slice::<serde_json::Value>(&data.raw),
+        ) {
+            (Some(t), Ok(mut v)) => match v.get_mut(&self.field) {
+                Some(v_mut) => {
+                    let dt = data.timestamp.format(t).to_string();
+                    *v_mut = serde_json::Value::String(dt);
+                    data.raw = serde_json::to_string(&v)?.as_bytes().to_vec();
+                    Ok(data)
                 }
-                let err = Error {
-                    reason: format!("Could no find a field named {}", self.field),
-                    kind: ErrorKind::Parser,
-                };
-                error!("Error occured during parsing: {:?}", err);
-                Err(err)
+                None => {
+                    let err = Error {
+                        reason: format!(
+                            "Timestamp ({}) could not be parsed: {}",
+                            &self.field,
+                            data.as_string()?
+                        ),
+                        kind: ErrorKind::Parser,
+                    };
+                    error!("Error occured during parsing: {:?}", err);
+                    Err(err)
+                }
+            },
+            (_, Err(e)) => {
+                error!("Error occured during parsing: {:?}", e);
+                Err(e.into())
             }
-            Err(e) => {
-                let err = Error {
-                    reason: format!("Timestamp could not be parsed: {}", e),
-                    kind: ErrorKind::Parser,
-                };
-                error!("Error occured during parsing: {:?}", err);
-                Err(err)
-            }
+            (None, Ok(_)) => Ok(data),
         }
     }
 }
